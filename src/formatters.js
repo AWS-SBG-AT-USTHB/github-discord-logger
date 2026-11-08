@@ -34,7 +34,9 @@ function baseEmbed(payload, title, url, description, color) {
     color,
     description,
     timestamp: new Date().toISOString(),
-    footer: { text: repo ? repo.full_name : 'organization' },
+    footer: {
+      text: repo ? repo.full_name : (payload.organization && payload.organization.login) || 'organization',
+    },
   };
   if (url) embed.url = url;
   return embed;
@@ -210,7 +212,76 @@ function formatRelease(payload) {
   );
 }
 
+function formatWatch(payload) {
+  const repo = payload.repository;
+  if (!repo || payload.action !== 'started') return null;
+  return baseEmbed(
+    payload,
+    `⭐ ${actorNamePlain(payload.sender)} starred ${repo.name}`,
+    repo.html_url,
+    `${actorLine(payload.sender)} starred [${repo.full_name}](${repo.html_url})`,
+    COLORS.release
+  );
+}
+
+function formatFork(payload) {
+  const repo = payload.repository;
+  const forkee = payload.forkee;
+  if (!repo || !forkee) return null;
+  return baseEmbed(
+    payload,
+    `🍴 ${actorNamePlain(payload.sender)} forked ${repo.name}`,
+    forkee.html_url,
+    `${actorLine(payload.sender)} forked [${repo.full_name}](${repo.html_url}) to [${forkee.full_name}](${forkee.html_url})`,
+    COLORS.neutral
+  );
+}
+
+function formatOrganization(payload) {
+  const org = payload.organization;
+  if (!org) return null;
+  const orgUrl = `https://github.com/${org.login}`;
+  if (payload.action === 'member_added' && payload.membership && payload.membership.user) {
+    const user = payload.membership.user;
+    return baseEmbed(
+      payload,
+      `👋 ${user.login} joined ${org.login}`,
+      user.html_url || `https://github.com/${user.login}`,
+      `[${user.login}](${user.html_url || `https://github.com/${user.login}`}) is now a member of [${org.login}](${orgUrl})`,
+      COLORS.created
+    );
+  }
+  if (payload.action === 'member_invited' && payload.invitation) {
+    const who = payload.invitation.login || payload.invitation.email || 'someone';
+    return baseEmbed(
+      payload,
+      `✉️ ${who} was invited to ${org.login}`,
+      orgUrl,
+      `Invited by ${actorLine(payload.sender)}`,
+      COLORS.neutral
+    );
+  }
+  return null;
+}
+
+function formatMember(payload) {
+  const repo = payload.repository;
+  const member = payload.member;
+  if (!repo || !member || payload.action !== 'added') return null;
+  return baseEmbed(
+    payload,
+    `🤝 ${member.login} added as collaborator on ${repo.name}`,
+    repo.html_url,
+    `[${member.login}](${member.html_url || `https://github.com/${member.login}`}) was added by ${actorLine(payload.sender)}`,
+    COLORS.created
+  );
+}
+
 const FORMATTERS = {
+  watch: formatWatch,
+  fork: formatFork,
+  organization: formatOrganization,
+  member: formatMember,
   push: formatPush,
   pull_request: formatPullRequest,
   pull_request_review: formatPullRequestReview,

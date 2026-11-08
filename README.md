@@ -13,6 +13,10 @@ through a Discord **incoming webhook**.
 | `pull_request_review` | approved, changes requested (only if you also subscribe to reviews) | comment-only reviews |
 | `issues` | opened, closed, reopened, assigned, labeled | everything else; PRs delivered via the issues event (would duplicate PR notifications) |
 | `release` | published / prereleased / released — **deduplicated** so one release posts once even though GitHub fires multiple actions | draft edits |
+| `watch` | Someone starred a repository | unstar / other actions |
+| `fork` | Someone forked a repository | — |
+| `organization` | New member joined, member invited | renames, removals, etc. |
+| `member` | Collaborator added to a repository | removed / edited |
 | `ping` | Answered with HTTP 200 (nothing posted) | — |
 
 Other event types are acknowledged with `204 No Content` and ignored.
@@ -129,6 +133,7 @@ One **organization-level** webhook covers all current and future repositories in
    - **Issues**
    - **Releases**
    - *(optional)* **Pull request reviews** — adds approval/changes-requested notifications
+   - *(optional)* **Watches** (stars), **Forks**, **Organizations** (members joining/invited — org-level webhook only) and **Members** (collaborators) — social/membership activity. The service handles them automatically; the event checkboxes in GitHub are the on/off switch.
 7. Make sure **Active** is checked and save.
 
 GitHub immediately sends a `ping` — check **Recent Deliveries** on the webhook page for a

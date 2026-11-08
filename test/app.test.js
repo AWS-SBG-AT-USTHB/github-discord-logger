@@ -55,7 +55,7 @@ test('rejects a non-object JSON payload with 400', async () => {
 });
 
 test('ignores unsupported event types with 204', async () => {
-  const res = await postEvent(srv.url, 'watch', { action: 'started', repository, sender });
+  const res = await postEvent(srv.url, 'gollum', { pages: [], repository, sender });
   assert.equal(res.status, 204);
 });
 
@@ -277,4 +277,53 @@ test('mentions in content cannot ping (embeds only; allowed_mentions enforced at
   // The embed may contain the text, but DiscordNotifier always sends
   // allowed_mentions: { parse: [] } — covered in discord.test.js.
   assert.match(lastSent().embed.description, /@everyone/);
+});
+
+test('star (watch started) is queued; other watch actions are ignored', async () => {
+  const res = await postEvent(srv.url, 'watch', { action: 'started', repository, sender });
+  assert.equal(res.status, 202);
+  assert.match(lastSent().embed.title, /octocat starred demo-repo/);
+});
+
+test('fork is queued with the new fork location', async () => {
+  const forkee = { full_name: 'octocat/demo-repo', html_url: 'https://github.com/octocat/demo-repo' };
+  const res = await postEvent(srv.url, 'fork', { forkee, repository, sender });
+  assert.equal(res.status, 202);
+  assert.match(lastSent().embed.title, /octocat forked demo-repo/);
+  assert.match(lastSent().embed.description, /octocat\/demo-repo/);
+});
+
+test('new organization member and invitation are announced', async () => {
+  const organization = { login: 'AWS-SBG-AT-USTHB' };
+  const added = await postEvent(srv.url, 'organization', {
+    action: 'member_added',
+    membership: { user: { login: 'newbie', html_url: 'https://github.com/newbie' } },
+    organization,
+    sender,
+  });
+  assert.equal(added.status, 202);
+  assert.match(lastSent().embed.title, /newbie joined AWS-SBG-AT-USTHB/);
+
+  const invited = await postEvent(srv.url, 'organization', {
+    action: 'member_invited',
+    invitation: { login: 'future-member' },
+    organization,
+    sender,
+  });
+  assert.equal(invited.status, 202);
+  assert.match(lastSent().embed.title, /future-member was invited/);
+
+  const other = await postEvent(srv.url, 'organization', { action: 'renamed', organization, sender });
+  assert.equal(other.status, 204);
+});
+
+test('collaborator added is announced', async () => {
+  const res = await postEvent(srv.url, 'member', {
+    action: 'added',
+    member: { login: 'helper' },
+    repository,
+    sender,
+  });
+  assert.equal(res.status, 202);
+  assert.match(lastSent().embed.title, /helper added as collaborator/);
 });
