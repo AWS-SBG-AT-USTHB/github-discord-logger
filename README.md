@@ -172,3 +172,7 @@ green `200`.
   either ever leaks; both are updated via environment variables only.
 - Never commit `.env`. The repo's `.gitignore` already excludes it.
 - The service stores nothing and exposes only `/` and `/github-webhook`; everything else is a 404.
+
+## Live deployment
+
+The service runs on Render at `https://github-discord-logger.onrender.com` (health check: `GET /`, webhook endpoint: `POST /github-webhook`).
